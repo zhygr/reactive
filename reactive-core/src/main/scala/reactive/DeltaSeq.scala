@@ -5,8 +5,7 @@ import scala.collection.generic.SeqFactory
 import scala.collection.generic.CanBuildFrom
 import scala.collection.generic.GenericTraversableTemplate
 import scala.collection.mutable.Builder
-import scala.collection.immutable
-import scala.collection.SeqLike
+import collection.{GenTraversableOnce, immutable, SeqLike}
 import Compat.GTraversableOnce
 
 object DeltaSeq extends SeqFactory[DeltaSeq] {
@@ -100,7 +99,7 @@ trait DeltaSeq[+T] extends immutable.Seq[T] with GenericTraversableTemplate[T, D
       val pu = parent.underlying
       (pu ++ xs, startDelta(pu ++ xs))
     }
-    def updatedFromParent(parentUpdated: DeltaSeq[T]): Appended[T] = new Appended[T](parentUpdated, prev.xs.asInstanceOf[Seq[T]]) {
+    def updatedFromParent(parentUpdated: DeltaSeq[T]): Appended[T] = new Appended[T](parentUpdated, prev.xs) {
       override val fromDelta = parentUpdated.fromDelta
       override val underlying = SeqDelta.patch(prev.underlying, fromDelta)
     }
@@ -541,7 +540,8 @@ trait DeltaSeq[+T] extends immutable.Seq[T] with GenericTraversableTemplate[T, D
   def apply(i: Int): T = underlying.apply(i)
   def length = underlying.length
   def iterator = underlying.iterator
-  override def toString = "DeltaSeq("+underlying.toString+"("+fromDelta+"))"
+
+  override def toString() = "DeltaSeq("+underlying.toString+"("+fromDelta+"))"
 
   private def immutableCopy = underlying match {
     case _: scala.collection.immutable.Seq[_] =>
@@ -580,7 +580,7 @@ trait DeltaSeq[+T] extends immutable.Seq[T] with GenericTraversableTemplate[T, D
   override def splitAt(n: Int) = (take(n), drop(n))
   override def takeWhile(p: T => Boolean): DeltaSeq[T] = new TakenWhile(immutableCopy, p)
   override def dropWhile(p: T => Boolean): DeltaSeq[T] = new DroppedWhile(immutableCopy, p)
-  override def ++[U >: T, That](xs: TraversableOnce[U])(implicit bf: CanBuildFrom[DeltaSeq[T], U, That]): That =
+  override def ++[U >: T, That](xs: GenTraversableOnce[U])(implicit bf: CanBuildFrom[DeltaSeq[T], U, That]): That =
     ifDS(
       new Appended[U](immutableCopy, xs.toSeq),
       super.++(xs)
